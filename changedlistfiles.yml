@@ -1,51 +1,48 @@
-name: JS/TS Change Detector
+name: Detect JS/TS Changes with File List
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
 
 jobs:
   detect-changes:
     runs-on: ubuntu-latest
     outputs:
-      js_changed: ${{ steps.filter.outputs.js }}
-      ts_changed: ${{ steps.filter.outputs.ts }}
       any_js_ts: ${{ steps.filter.outputs.any_js_ts }}
+      js_ts_files: ${{ steps.filter.outputs.any_js_ts_files }}
+
     steps:
-      - name: Check out code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Detect JS/TS changes
+      - name: Detect JS/TS file changes
         uses: dorny/paths-filter@v3
         id: filter
         with:
+          list-files: json
           filters: |
-            js:
-              - '**/*.js'
-            ts:
-              - '**/*.ts'
-              - '**/*.tsx'
             any_js_ts:
-              - '**/*.js'
-              - '**/*.ts'
-              - '**/*.tsx'
+              - '*.js'
+              - '*.ts'
+              - '*.tsx'
 
-      - name: Debug: Show change detection outputs
+      - name: Debug Output
         run: |
-          echo "JS changed?: ${{ steps.filter.outputs.js }}"
-          echo "TS changed?: ${{ steps.filter.outputs.ts }}"
-          echo "JS or TS changed?: ${{ steps.filter.outputs.any_js_ts }}"
+          echo "JS/TS changed? ${{ steps.filter.outputs.any_js_ts }}"
+          echo "Changed files: ${{ steps.filter.outputs.any_js_ts_files }}"
 
   run-js-ts-tasks:
     needs: detect-changes
     runs-on: ubuntu-latest
     if: needs.detect-changes.outputs.any_js_ts == 'true'
     steps:
-      - name: Check out code
+      - name: Checkout Code Again
         uses: actions/checkout@v4
 
-      - name: Run JS/TS-specific tasks
+      - name: Process Changed JS/TS Files
         run: |
-          echo "JS or TS files changed—running related tasks..."
-          # Place build, test, lint, or deploy commands here
+          echo "Processing JS/TS files:"
+          echo "${{ needs.detect-changes.outputs.js_ts_files }}"
+          # Here you could parse the JSON or loop through the file list
