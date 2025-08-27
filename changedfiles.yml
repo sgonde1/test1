@@ -1,0 +1,51 @@
+name: JS/TS Change Detector
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      js_changed: ${{ steps.filter.outputs.js }}
+      ts_changed: ${{ steps.filter.outputs.ts }}
+      any_js_ts: ${{ steps.filter.outputs.any_js_ts }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Detect JS/TS changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - '**/*.js'
+            ts:
+              - '**/*.ts'
+              - '**/*.tsx'
+            any_js_ts:
+              - '**/*.js'
+              - '**/*.ts'
+              - '**/*.tsx'
+
+      - name: Debug: Show change detection outputs
+        run: |
+          echo "JS changed?: ${{ steps.filter.outputs.js }}"
+          echo "TS changed?: ${{ steps.filter.outputs.ts }}"
+          echo "JS or TS changed?: ${{ steps.filter.outputs.any_js_ts }}"
+
+  run-js-ts-tasks:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.any_js_ts == 'true'
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run JS/TS-specific tasks
+        run: |
+          echo "JS or TS files changed—running related tasks..."
+          # Place build, test, lint, or deploy commands here
