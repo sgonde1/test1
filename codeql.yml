@@ -1,0 +1,53 @@
+name: CodeQL - Scan Changed JS/TS Files
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      js_ts_changed: ${{ steps.filter.outputs.any_js_ts }}
+      js_ts_files: ${{ steps.filter.outputs.any_js_ts_files }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect JS/TS file changes
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: json
+          filters: |
+            js_ts:
+              - '**/*.js'
+              - '**/*.ts'
+              - '**/*.tsx'
+
+      - name: Debug list of changed files
+        run: |
+          echo "Changed JS/TS files JSON: ${{ steps.filter.outputs.js_ts_files }}"
+
+  codeql-scan:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.js_ts_changed == 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL with dynamic config
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          config: |
+            disable-default-queries: false
+            paths:
+              ${{ fromJson(needs.detect-changes.outputs.js_ts_files) }}
+
+      - name: Build (if needed)
+        run: npm install
+
+      - name: Run CodeQL Analyze
+        uses: github/codeql-action/analyze@v3
